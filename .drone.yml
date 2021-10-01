@@ -107,6 +107,16 @@ steps:
   depends_on:
   - build-backend
 
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
+
 - name: gen-version
   image: grafana/build-container:1.4.3
   commands:
@@ -381,6 +391,16 @@ steps:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
   - build-backend
+
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
 
 - name: gen-version
   image: grafana/build-container:1.4.3
@@ -862,6 +882,16 @@ steps:
   depends_on:
   - build-backend
 
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
+
 - name: gen-version
   image: grafana/build-container:1.4.3
   commands:
@@ -1241,6 +1271,16 @@ steps:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
   - build-backend
+
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
 
 - name: lint-backend-enterprise2
   image: grafana/build-container:1.4.3
@@ -1826,6 +1866,16 @@ steps:
   depends_on:
   - build-backend
 
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
+
 - name: gen-version
   image: grafana/build-container:1.4.3
   commands:
@@ -2194,6 +2244,16 @@ steps:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
   - build-backend
+
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
 
 - name: lint-backend-enterprise2
   image: grafana/build-container:1.4.3
@@ -2769,6 +2829,16 @@ steps:
   depends_on:
   - build-backend
 
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
+
 - name: gen-version
   image: grafana/build-container:1.4.3
   commands:
@@ -3108,6 +3178,16 @@ steps:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
   - build-backend
+
+- name: ensure-cuetsified
+  image: grafana/build-container:1.4.3
+  commands:
+  - ./bin/linux-amd64/grafana-cli cue gen-ts --grafana-root .
+  - git diff --stat --exit-code
+  - touch shouldfail
+  - u="$(git ls-files --others --exclude-standard)" && test -z "$u"
+  depends_on:
+  - validate-scuemata
 
 - name: lint-backend-enterprise2
   image: grafana/build-container:1.4.3
@@ -3564,6 +3644,6 @@ get:
 
 ---
 kind: signature
-hmac: fd746435bdd748cec43565f7ab4230da5a221aa848b11da68346921a3d67ff91
+hmac: 0c7f909fb9c1be6a6ce715df7cc46292f3be71501f136b099b0102c092eccf48
 
 ...
