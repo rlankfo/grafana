@@ -107,8 +107,6 @@ func TestService_GetHttpTransport(t *testing.T) {
 			},
 		})
 
-		//setting.SecretKey = "password"
-		//
 		json := simplejson.New()
 		json.Set("tlsAuthWithCACert", true)
 
