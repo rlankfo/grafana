@@ -19,8 +19,8 @@ import (
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/services/datasources"
-	"github.com/grafana/grafana/pkg/services/encryption/ossencryption"
 	"github.com/grafana/grafana/pkg/services/oauthtoken"
+	"github.com/grafana/grafana/pkg/services/secrets"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +85,8 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		})
 		setting.SecretKey = "password" //nolint:goconst
 
-		key, err := ossencryption.ProvideService().Encrypt(context.Background(), []byte("123"), "password")
+		secretsService := secrets.SetupTestService(t)
+		key, err := secretsService.Encrypt(context.Background(), []byte("123"), secrets.WithoutScope())
 		require.NoError(t, err)
 
 		ds := &models.DataSource{
@@ -113,11 +114,11 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 
 		t.Run("When matching route path", func(t *testing.T) {
 			ctx, req := setUp()
-			dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+			dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 			proxy, err := NewDataSourceProxy(ds, plugin, ctx, "api/v4/some/method", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 			require.NoError(t, err)
 			proxy.route = plugin.Routes[0]
-			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, ossencryption.ProvideService())
+			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, secretsService)
 
 			assert.Equal(t, "https://www.google.com/some/method", req.URL.String())
 			assert.Equal(t, "my secret 123", req.Header.Get("x-header"))
@@ -125,11 +126,11 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 
 		t.Run("When matching route path and has dynamic url", func(t *testing.T) {
 			ctx, req := setUp()
-			dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+			dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 			proxy, err := NewDataSourceProxy(ds, plugin, ctx, "api/common/some/method", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 			require.NoError(t, err)
 			proxy.route = plugin.Routes[3]
-			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, ossencryption.ProvideService())
+			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, secretsService)
 
 			assert.Equal(t, "https://dynamic.grafana.com/some/method?apiKey=123", req.URL.String())
 			assert.Equal(t, "my secret 123", req.Header.Get("x-header"))
@@ -137,22 +138,22 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 
 		t.Run("When matching route path with no url", func(t *testing.T) {
 			ctx, req := setUp()
-			dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+			dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 			proxy, err := NewDataSourceProxy(ds, plugin, ctx, "", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 			require.NoError(t, err)
 			proxy.route = plugin.Routes[4]
-			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, ossencryption.ProvideService())
+			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, secretsService)
 
 			assert.Equal(t, "http://localhost/asd", req.URL.String())
 		})
 
 		t.Run("When matching route path and has dynamic body", func(t *testing.T) {
 			ctx, req := setUp()
-			dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+			dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 			proxy, err := NewDataSourceProxy(ds, plugin, ctx, "api/body", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 			require.NoError(t, err)
 			proxy.route = plugin.Routes[5]
-			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, ossencryption.ProvideService())
+			ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, proxy.route, proxy.ds, cfg, secretsService)
 
 			content, err := ioutil.ReadAll(req.Body)
 			require.NoError(t, err)
@@ -162,7 +163,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		t.Run("Validating request", func(t *testing.T) {
 			t.Run("plugin route with valid role", func(t *testing.T) {
 				ctx, _ := setUp()
-				dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+				dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 				proxy, err := NewDataSourceProxy(ds, plugin, ctx, "api/v4/some/method", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 				require.NoError(t, err)
 				err = proxy.validateRequest()
@@ -171,7 +172,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 
 			t.Run("plugin route with admin role and user is editor", func(t *testing.T) {
 				ctx, _ := setUp()
-				dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+				dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 				proxy, err := NewDataSourceProxy(ds, plugin, ctx, "api/admin", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 				require.NoError(t, err)
 				err = proxy.validateRequest()
@@ -181,7 +182,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 			t.Run("plugin route with admin role and user is admin", func(t *testing.T) {
 				ctx, _ := setUp()
 				ctx.SignedInUser.OrgRole = models.ROLE_ADMIN
-				dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+				dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 				proxy, err := NewDataSourceProxy(ds, plugin, ctx, "api/admin", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 				require.NoError(t, err)
 				err = proxy.validateRequest()
@@ -228,7 +229,8 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		})
 		setting.SecretKey = "password"
 
-		key, err := ossencryption.ProvideService().Encrypt(context.Background(), []byte("123"), "password")
+		secretsService := secrets.SetupTestService(t)
+		key, err := secretsService.Encrypt(context.Background(), []byte("123"), secrets.WithoutScope())
 		require.NoError(t, err)
 
 		ds := &models.DataSource{
@@ -262,10 +264,10 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 
 				cfg := &setting.Cfg{}
 
-				dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+				dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 				proxy, err := NewDataSourceProxy(ds, plugin, ctx, "pathwithtoken1", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 				require.NoError(t, err)
-				ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, plugin.Routes[0], proxy.ds, cfg, ossencryption.ProvideService())
+				ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, plugin.Routes[0], proxy.ds, cfg, secretsService)
 
 				authorizationHeaderCall1 = req.Header.Get("Authorization")
 				assert.Equal(t, "https://api.nr1.io/some/path", req.URL.String())
@@ -278,10 +280,10 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 					req, err := http.NewRequest("GET", "http://localhost/asd", nil)
 					require.NoError(t, err)
 					client = newFakeHTTPClient(t, json2)
-					dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+					dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 					proxy, err := NewDataSourceProxy(ds, plugin, ctx, "pathwithtoken2", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 					require.NoError(t, err)
-					ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, plugin.Routes[1], proxy.ds, cfg, ossencryption.ProvideService())
+					ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, plugin.Routes[1], proxy.ds, cfg, secretsService)
 
 					authorizationHeaderCall2 = req.Header.Get("Authorization")
 
@@ -295,10 +297,10 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 						require.NoError(t, err)
 
 						client = newFakeHTTPClient(t, []byte{})
-						dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+						dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 						proxy, err := NewDataSourceProxy(ds, plugin, ctx, "pathwithtoken1", cfg, httpClientProvider, &oauthtoken.Service{}, dsService)
 						require.NoError(t, err)
-						ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, plugin.Routes[0], proxy.ds, cfg, ossencryption.ProvideService())
+						ApplyRoute(proxy.ctx.Req.Context(), req, proxy.proxyPath, plugin.Routes[0], proxy.ds, cfg, secretsService)
 
 						authorizationHeaderCall3 := req.Header.Get("Authorization")
 						assert.Equal(t, "https://api.nr1.io/some/path", req.URL.String())
@@ -316,7 +318,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		ds := &models.DataSource{Url: "htttp://graphite:8080", Type: models.DS_GRAPHITE}
 		ctx := &models.ReqContext{}
 
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/render", &setting.Cfg{BuildVersion: "5.3.0"}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodGet, "http://grafana.com/sub", nil)
@@ -342,7 +344,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		}
 
 		ctx := &models.ReqContext{}
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -366,7 +368,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		}
 
 		ctx := &models.ReqContext{}
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -394,7 +396,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 		}
 
 		ctx := &models.ReqContext{}
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -416,7 +418,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 			Url:  "http://host/root/",
 		}
 		ctx := &models.ReqContext{}
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/path/to/folder/", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodGet, "http://grafana.com/sub", nil)
@@ -472,7 +474,7 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 			},
 			oAuthEnabled: true,
 		}
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/path/to/folder/", &setting.Cfg{}, httpClientProvider, &mockAuthToken, dsService)
 		require.NoError(t, err)
 		req, err = http.NewRequest(http.MethodGet, "http://grafana.com/sub", nil)
@@ -523,22 +525,24 @@ func TestDataSourceProxy_routeRule(t *testing.T) {
 	})
 
 	t.Run("When proxying data source proxy should handle authentication", func(t *testing.T) {
+		secretsService := secrets.SetupTestService(t)
+
 		tests := []*testCase{
-			createAuthTest(t, models.DS_INFLUXDB_08, authTypePassword, authCheckQuery, false),
-			createAuthTest(t, models.DS_INFLUXDB_08, authTypePassword, authCheckQuery, true),
-			createAuthTest(t, models.DS_INFLUXDB, authTypePassword, authCheckHeader, true),
-			createAuthTest(t, models.DS_INFLUXDB, authTypePassword, authCheckHeader, false),
-			createAuthTest(t, models.DS_INFLUXDB, authTypeBasic, authCheckHeader, true),
-			createAuthTest(t, models.DS_INFLUXDB, authTypeBasic, authCheckHeader, false),
+			createAuthTest(t, secretsService, models.DS_INFLUXDB_08, authTypePassword, authCheckQuery, false),
+			createAuthTest(t, secretsService, models.DS_INFLUXDB_08, authTypePassword, authCheckQuery, true),
+			createAuthTest(t, secretsService, models.DS_INFLUXDB, authTypePassword, authCheckHeader, true),
+			createAuthTest(t, secretsService, models.DS_INFLUXDB, authTypePassword, authCheckHeader, false),
+			createAuthTest(t, secretsService, models.DS_INFLUXDB, authTypeBasic, authCheckHeader, true),
+			createAuthTest(t, secretsService, models.DS_INFLUXDB, authTypeBasic, authCheckHeader, false),
 
 			// These two should be enough for any other datasource at the moment. Proxy has special handling
 			// only for Influx, others have the same path and only BasicAuth. Non BasicAuth datasources
 			// do not go through proxy but through TSDB API which is not tested here.
-			createAuthTest(t, models.DS_ES, authTypeBasic, authCheckHeader, false),
-			createAuthTest(t, models.DS_ES, authTypeBasic, authCheckHeader, true),
+			createAuthTest(t, secretsService, models.DS_ES, authTypeBasic, authCheckHeader, false),
+			createAuthTest(t, secretsService, models.DS_ES, authTypeBasic, authCheckHeader, true),
 		}
 		for _, test := range tests {
-			runDatasourceAuthTest(t, test)
+			runDatasourceAuthTest(t, secretsService, test)
 		}
 	})
 }
@@ -599,7 +603,7 @@ func TestDataSourceProxy_requestHandling(t *testing.T) {
 
 	t.Run("When response header Set-Cookie is not set should remove proxied Set-Cookie header", func(t *testing.T) {
 		ctx, ds := setUp(t)
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/render", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -615,7 +619,7 @@ func TestDataSourceProxy_requestHandling(t *testing.T) {
 				"Set-Cookie": "important_cookie=important_value",
 			},
 		})
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/render", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -635,7 +639,7 @@ func TestDataSourceProxy_requestHandling(t *testing.T) {
 				t.Log("Wrote 401 response")
 			},
 		})
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/render", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -658,7 +662,7 @@ func TestDataSourceProxy_requestHandling(t *testing.T) {
 		})
 
 		ctx.Req = httptest.NewRequest("GET", "/api/datasources/proxy/1/path/%2Ftest%2Ftest%2F?query=%2Ftest%2Ftest%2F", nil)
-		dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+		dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 		proxy, err := NewDataSourceProxy(ds, plugin, ctx, "/path/%2Ftest%2Ftest%2F", &setting.Cfg{}, httpClientProvider, &oauthtoken.Service{}, dsService)
 		require.NoError(t, err)
 
@@ -681,7 +685,7 @@ func TestNewDataSourceProxy_InvalidURL(t *testing.T) {
 	}
 	cfg := setting.Cfg{}
 	plugin := plugins.DataSourcePlugin{}
-	dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+	dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 	_, err := NewDataSourceProxy(&ds, &plugin, &ctx, "api/method", &cfg, httpclient.NewProvider(), &oauthtoken.Service{}, dsService)
 	require.Error(t, err)
 	assert.True(t, strings.HasPrefix(err.Error(), `validation of data source URL "://host/root" failed`))
@@ -699,7 +703,7 @@ func TestNewDataSourceProxy_ProtocolLessURL(t *testing.T) {
 	cfg := setting.Cfg{}
 	plugin := plugins.DataSourcePlugin{}
 
-	dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+	dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 	_, err := NewDataSourceProxy(&ds, &plugin, &ctx, "api/method", &cfg, httpclient.NewProvider(), &oauthtoken.Service{}, dsService)
 
 	require.NoError(t, err)
@@ -738,7 +742,7 @@ func TestNewDataSourceProxy_MSSQL(t *testing.T) {
 				Url:  tc.url,
 			}
 
-			dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+			dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 			p, err := NewDataSourceProxy(&ds, &plugin, &ctx, "api/method", &cfg, httpclient.NewProvider(), &oauthtoken.Service{}, dsService)
 			if tc.err == nil {
 				require.NoError(t, err)
@@ -763,7 +767,7 @@ func getDatasourceProxiedRequest(t *testing.T, ctx *models.ReqContext, cfg *sett
 		Url:  "http://host/root/",
 	}
 
-	dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+	dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 	proxy, err := NewDataSourceProxy(ds, plugin, ctx, "", cfg, httpclient.NewProvider(), &oauthtoken.Service{}, dsService)
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodGet, "http://grafana.com/sub", nil)
@@ -816,7 +820,7 @@ const (
 	authCheckHeader = "header"
 )
 
-func createAuthTest(t *testing.T, dsType string, authType string, authCheck string, useSecureJsonData bool) *testCase {
+func createAuthTest(t *testing.T, secretsService secrets.SecretsService, dsType string, authType string, authCheck string, useSecureJsonData bool) *testCase {
 	ctx := context.Background()
 
 	// Basic user:password
@@ -829,17 +833,18 @@ func createAuthTest(t *testing.T, dsType string, authType string, authCheck stri
 			JsonData: simplejson.New(),
 		},
 	}
+
 	var message string
 	var err error
 	if authType == authTypePassword {
 		message = fmt.Sprintf("%v should add username and password", dsType)
 		test.datasource.User = "user"
 		if useSecureJsonData {
-			test.datasource.SecureJsonData, err = ossencryption.ProvideService().EncryptJsonData(
+			test.datasource.SecureJsonData, err = secretsService.EncryptJsonData(
 				ctx,
 				map[string]string{
 					"password": "password",
-				}, setting.SecretKey)
+				}, secrets.WithoutScope())
 		} else {
 			test.datasource.Password = "password"
 		}
@@ -848,11 +853,11 @@ func createAuthTest(t *testing.T, dsType string, authType string, authCheck stri
 		test.datasource.BasicAuth = true
 		test.datasource.BasicAuthUser = "user"
 		if useSecureJsonData {
-			test.datasource.SecureJsonData, err = ossencryption.ProvideService().EncryptJsonData(
+			test.datasource.SecureJsonData, err = secretsService.EncryptJsonData(
 				ctx,
 				map[string]string{
 					"basicAuthPassword": "password",
-				}, setting.SecretKey)
+				}, secrets.WithoutScope())
 		} else {
 			test.datasource.BasicAuthPassword = "password"
 		}
@@ -880,10 +885,10 @@ func createAuthTest(t *testing.T, dsType string, authType string, authCheck stri
 	return test
 }
 
-func runDatasourceAuthTest(t *testing.T, test *testCase) {
+func runDatasourceAuthTest(t *testing.T, secretsService secrets.SecretsService, test *testCase) {
 	plugin := &plugins.DataSourcePlugin{}
 	ctx := &models.ReqContext{}
-	dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+	dsService := datasources.ProvideService(bus.New(), nil, secretsService)
 	proxy, err := NewDataSourceProxy(test.datasource, plugin, ctx, "", &setting.Cfg{}, httpclient.NewProvider(), &oauthtoken.Service{}, dsService)
 	require.NoError(t, err)
 
@@ -923,7 +928,7 @@ func Test_PathCheck(t *testing.T) {
 		return ctx, req
 	}
 	ctx, _ := setUp()
-	dsService := datasources.ProvideService(bus.New(), nil, ossencryption.ProvideService())
+	dsService := datasources.ProvideService(bus.New(), nil, secrets.SetupTestService(t))
 	proxy, err := NewDataSourceProxy(&models.DataSource{}, plugin, ctx, "b", &setting.Cfg{}, httpclient.NewProvider(), &oauthtoken.Service{}, dsService)
 	require.NoError(t, err)
 
