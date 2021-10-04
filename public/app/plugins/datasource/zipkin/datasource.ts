@@ -6,6 +6,7 @@ import {
   DataQueryResponse,
   DataSourceApi,
   DataSourceInstanceSettings,
+  DataSourceJsonData,
   FieldType,
   MutableDataFrame,
 } from '@grafana/data';
@@ -15,11 +16,18 @@ import { apiPrefix } from './constants';
 import { ZipkinQuery, ZipkinSpan } from './types';
 import { createGraphFrames } from './utils/graphTransform';
 import { transformResponse } from './utils/transforms';
+import { NodeGraphOptions } from 'app/core/components/NodeGraphSettings';
 
-export class ZipkinDatasource extends DataSourceApi<ZipkinQuery> {
+export interface ZipkinJsonData extends DataSourceJsonData {
+  nodeGraph?: NodeGraphOptions;
+}
+
+export class ZipkinDatasource extends DataSourceApi<ZipkinQuery, ZipkinJsonData> {
   uploadedJson: string | ArrayBuffer | null = null;
-  constructor(private instanceSettings: DataSourceInstanceSettings) {
+  nodeGraph?: NodeGraphOptions;
+  constructor(private instanceSettings: DataSourceInstanceSettings<ZipkinJsonData>) {
     super(instanceSettings);
+    this.nodeGraph = instanceSettings.jsonData.nodeGraph;
   }
 
   query(options: DataQueryRequest<ZipkinQuery>): Observable<DataQueryResponse> {

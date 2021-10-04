@@ -27,6 +27,7 @@ import {
   createTableFrameFromSearch,
 } from './resultTransformer';
 import { tokenizer } from './syntax';
+import { NodeGraphOptions } from 'app/core/components/NodeGraphSettings';
 
 // search = Loki search, nativeSearch = Tempo search for backwards compatibility
 export type TempoQueryType = 'search' | 'traceId' | 'serviceMap' | 'upload' | 'nativeSearch';
@@ -39,6 +40,7 @@ export interface TempoJsonData extends DataSourceJsonData {
   search?: {
     hide?: boolean;
   };
+  nodeGraph?: NodeGraphOptions;
 }
 
 export type TempoQuery = {
@@ -62,6 +64,7 @@ export class TempoDatasource extends DataSourceWithBackend<TempoQuery, TempoJson
   search?: {
     hide?: boolean;
   };
+  nodeGraph?: NodeGraphOptions;
   uploadedJson?: string | ArrayBuffer | null = null;
 
   constructor(private instanceSettings: DataSourceInstanceSettings<TempoJsonData>) {
@@ -69,6 +72,7 @@ export class TempoDatasource extends DataSourceWithBackend<TempoQuery, TempoJson
     this.tracesToLogs = instanceSettings.jsonData.tracesToLogs;
     this.serviceMap = instanceSettings.jsonData.serviceMap;
     this.search = instanceSettings.jsonData.search;
+    this.nodeGraph = instanceSettings.jsonData.nodeGraph;
   }
 
   query(options: DataQueryRequest<TempoQuery>): Observable<DataQueryResponse> {

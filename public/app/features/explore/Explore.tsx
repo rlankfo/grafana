@@ -37,6 +37,7 @@ import { ResponseErrorContainer } from './ResponseErrorContainer';
 import { TraceViewContainer } from './TraceView/TraceViewContainer';
 import { ExploreGraph } from './ExploreGraph';
 import { LogsVolumePanel } from './LogsVolumePanel';
+import { TempoDatasource } from 'app/plugins/datasource/tempo/datasource';
 
 const getStyles = (theme: GrafanaTheme2) => {
   return {
@@ -324,6 +325,12 @@ export class Explore extends React.PureComponent<Props, ExploreState> {
     const showRichHistory = openDrawer === ExploreDrawer.RichHistory;
     const showQueryInspector = openDrawer === ExploreDrawer.QueryInspector;
     const showLogsVolume = !!logsVolumeDataProvider;
+    // Only show node graph if X-Ray datasource or node graph is enabled
+    const nodeGraphEnabled =
+      datasourceInstance &&
+      (datasourceInstance?.type === 'grafana-x-ray-datasource' ||
+        (['jaeger', 'zipkin', 'tempo'].includes(datasourceInstance.type) &&
+          (datasourceInstance as TempoDatasource)?.nodeGraph?.enabled));
 
     return (
       <CustomScrollbar autoHeightMin={'100%'}>
@@ -363,7 +370,9 @@ export class Explore extends React.PureComponent<Props, ExploreState> {
                           {showLogsVolume && <ErrorBoundaryAlert>{this.renderLogsVolume(width)}</ErrorBoundaryAlert>}
                           {showTable && <ErrorBoundaryAlert>{this.renderTablePanel(width)}</ErrorBoundaryAlert>}
                           {showLogs && <ErrorBoundaryAlert>{this.renderLogsPanel(width)}</ErrorBoundaryAlert>}
-                          {showNodeGraph && <ErrorBoundaryAlert>{this.renderNodeGraphPanel()}</ErrorBoundaryAlert>}
+                          {showNodeGraph && nodeGraphEnabled && (
+                            <ErrorBoundaryAlert>{this.renderNodeGraphPanel()}</ErrorBoundaryAlert>
+                          )}
                           {showTrace && <ErrorBoundaryAlert>{this.renderTraceViewPanel()}</ErrorBoundaryAlert>}
                         </>
                       )}
