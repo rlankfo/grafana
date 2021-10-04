@@ -16,7 +16,7 @@ import {
   TimeZone,
 } from '@grafana/data';
 import { PanelRenderer } from '@grafana/runtime';
-import { GraphDrawStyle, LegendDisplayMode, TooltipDisplayMode } from '@grafana/schema';
+import { GraphDrawStyle, LegendDisplayMode, TooltipDisplayMode, GraphFieldConfig } from '@grafana/schema';
 import {
   Icon,
   PanelContext,
@@ -32,6 +32,7 @@ import { identity } from 'lodash';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePrevious } from 'react-use';
 import { seriesVisibilityConfigFactory } from '../dashboard/dashgrid/SeriesVisibilityConfigFactory';
+import { ExploreStyleSelect } from './ExploreStyleSelect';
 
 const MAX_NUMBER_OF_TIME_SERIES = 20;
 
@@ -75,7 +76,7 @@ export function ExploreGraph({
 
   const structureRev = baseStructureRev + structureChangesRef.current;
 
-  const [fieldConfig, setFieldConfig] = useState<FieldConfigSource>({
+  const [fieldConfig, setFieldConfig] = useState<FieldConfigSource<GraphFieldConfig>>({
     defaults: {
       color: {
         mode: FieldColorModeId.PaletteClassic,
@@ -150,6 +151,7 @@ export function ExploreGraph({
           >{`Show all ${dataWithConfig.length}`}</span>
         </div>
       )}
+      <ExploreStyleSelect fieldConfig={fieldConfig} onChange={setFieldConfig} />
       <PanelRenderer
         data={{ series: seriesToShow, timeRange, structureRev, state: loadingState, annotations }}
         pluginId="timeseries"
