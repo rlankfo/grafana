@@ -6,7 +6,15 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import memoizeOne from 'memoize-one';
 import { selectors } from '@grafana/e2e-selectors';
 import { Collapse, CustomScrollbar, ErrorBoundaryAlert, Themeable2, withTheme2 } from '@grafana/ui';
-import { AbsoluteTimeRange, DataFrame, DataQuery, GrafanaTheme2, LoadingState, RawTimeRange } from '@grafana/data';
+import {
+  AbsoluteTimeRange,
+  DataFrame,
+  DataQuery,
+  DataSourceApi,
+  GrafanaTheme2,
+  LoadingState,
+  RawTimeRange,
+} from '@grafana/data';
 
 import LogsContainer from './LogsContainer';
 import { QueryRows } from './QueryRows';
@@ -37,7 +45,7 @@ import { ResponseErrorContainer } from './ResponseErrorContainer';
 import { TraceViewContainer } from './TraceView/TraceViewContainer';
 import { ExploreGraph } from './ExploreGraph';
 import { LogsVolumePanel } from './LogsVolumePanel';
-import { TempoDatasource } from 'app/plugins/datasource/tempo/datasource';
+import { hasOwnProperty } from 'app/core/utils/hasOwnProperty';
 
 const getStyles = (theme: GrafanaTheme2) => {
   return {
@@ -303,6 +311,27 @@ export class Explore extends React.PureComponent<Props, ExploreState> {
     );
   }
 
+  isNodeGraphEnabled(datasource: DataSourceApi): boolean {
+    // Render Node Graph for X-Ray
+    if (datasource.type === 'grafana-x-ray-datasource') {
+      return true;
+    }
+
+    // Else check if nodeGraph is enabled. Check if nodeGraph config exists and extend type using hasOwnProperty util
+    if (hasOwnProperty(datasource, 'nodeGraph') && typeof datasource.nodeGraph === 'object') {
+      let nodeGraphConfig = datasource.nodeGraph;
+      if (
+        nodeGraphConfig &&
+        hasOwnProperty(nodeGraphConfig, 'enabled') &&
+        typeof nodeGraphConfig.enabled === 'boolean'
+      ) {
+        return nodeGraphConfig.enabled;
+      }
+    }
+
+    return false;
+  }
+
   render() {
     const {
       datasourceInstance,
@@ -326,11 +355,7 @@ export class Explore extends React.PureComponent<Props, ExploreState> {
     const showQueryInspector = openDrawer === ExploreDrawer.QueryInspector;
     const showLogsVolume = !!logsVolumeDataProvider;
     // Only show node graph if X-Ray datasource or node graph is enabled
-    const nodeGraphEnabled =
-      datasourceInstance &&
-      (datasourceInstance?.type === 'grafana-x-ray-datasource' ||
-        (['jaeger', 'zipkin', 'tempo'].includes(datasourceInstance.type) &&
-          (datasourceInstance as TempoDatasource)?.nodeGraph?.enabled));
+    const nodeGraphEnabled = datasourceInstance ? this.isNodeGraphEnabled(datasourceInstance) : false;
 
     return (
       <CustomScrollbar autoHeightMin={'100%'}>
