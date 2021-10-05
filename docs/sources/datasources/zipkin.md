@@ -41,7 +41,7 @@ This is a configuration for the [trace to logs feature]({{< relref "../explore/t
 
 ### Node Graph
 
-This is a configuration for the Node Graph visualization.
+This is a configuration for the beta Node Graph visualization. The Node Graph is shown after the trace view is loaded and is disabled by default.
 
 -- **Enable Node Graph -** Enables the Node Graph visualization.
 
