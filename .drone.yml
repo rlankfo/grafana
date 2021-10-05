@@ -73,7 +73,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: gen-version
   image: grafana/build-container:1.4.3
@@ -322,7 +322,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: gen-version
   image: grafana/build-container:1.4.3
@@ -812,7 +812,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: gen-version
   image: grafana/build-container:1.4.3
@@ -1202,7 +1202,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: lint-backend-enterprise2
   image: grafana/build-container:1.4.3
@@ -1796,7 +1796,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: gen-version
   image: grafana/build-container:1.4.3
@@ -2175,7 +2175,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: lint-backend-enterprise2
   image: grafana/build-container:1.4.3
@@ -2756,7 +2756,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: gen-version
   image: grafana/build-container:1.4.3
@@ -3103,7 +3103,7 @@ steps:
   commands:
   - ./bin/linux-amd64/grafana-cli cue validate-schema --grafana-root .
   depends_on:
-  - build-backend
+  - build-binary
 
 - name: lint-backend-enterprise2
   image: grafana/build-container:1.4.3
@@ -3560,6 +3560,6 @@ get:
 
 ---
 kind: signature
-hmac: b97b710a4118445a7750a41b520a7fe7756d6c0971f50cf97f68ea982e0dad33
+hmac: ac20174113852b90c16a9d6664c07f75a6c8c099511e1cb8ccf8b27398c6bb1d
 
 ...
