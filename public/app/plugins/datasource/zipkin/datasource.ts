@@ -39,7 +39,7 @@ export class ZipkinDatasource extends DataSourceApi<ZipkinQuery, ZipkinJsonData>
 
       try {
         const traceData = JSON.parse(this.uploadedJson as string);
-        return of(responseToDataQueryResponse({ data: traceData }));
+        return of(responseToDataQueryResponse({ data: traceData }, this.nodeGraph?.enabled));
       } catch (error) {
         return of({ error: { message: 'JSON is not valid Zipkin format' }, data: [] });
       }
@@ -47,7 +47,7 @@ export class ZipkinDatasource extends DataSourceApi<ZipkinQuery, ZipkinJsonData>
 
     if (target.query) {
       return this.request<ZipkinSpan[]>(`${apiPrefix}/trace/${encodeURIComponent(target.query)}`).pipe(
-        map(responseToDataQueryResponse)
+        map((res) => responseToDataQueryResponse(res, this.nodeGraph?.enabled))
       );
     }
     return of(emptyDataQueryResponse);
@@ -83,9 +83,13 @@ export class ZipkinDatasource extends DataSourceApi<ZipkinQuery, ZipkinJsonData>
   }
 }
 
-function responseToDataQueryResponse(response: { data: ZipkinSpan[] }): DataQueryResponse {
+function responseToDataQueryResponse(response: { data: ZipkinSpan[] }, nodeGraph = false): DataQueryResponse {
+  let data = response?.data ? [transformResponse(response?.data)] : [];
+  if (nodeGraph) {
+    data.push(...createGraphFrames(response?.data));
+  }
   return {
-    data: response?.data ? [transformResponse(response?.data), ...createGraphFrames(response?.data)] : [],
+    data,
   };
 }
 

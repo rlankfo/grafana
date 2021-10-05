@@ -58,8 +58,12 @@ export class JaegerDatasource extends DataSourceApi<JaegerQuery, JaegerJsonData>
           if (!traceData) {
             return { data: [emptyTraceDataFrame] };
           }
+          let data = [createTraceFrame(traceData)];
+          if (this.nodeGraph?.enabled) {
+            data.push(...createGraphFrames(traceData));
+          }
           return {
-            data: [createTraceFrame(traceData), ...createGraphFrames(traceData)],
+            data,
           };
         })
       );
@@ -72,7 +76,11 @@ export class JaegerDatasource extends DataSourceApi<JaegerQuery, JaegerJsonData>
 
       try {
         const traceData = JSON.parse(this.uploadedJson as string).data[0];
-        return of({ data: [createTraceFrame(traceData), ...createGraphFrames(traceData)] });
+        let data = [createTraceFrame(traceData)];
+        if (this.nodeGraph?.enabled) {
+          data.push(...createGraphFrames(traceData));
+        }
+        return of({ data });
       } catch (error) {
         return of({ error: { message: 'JSON is not valid Jaeger format' }, data: [] });
       }

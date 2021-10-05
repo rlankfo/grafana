@@ -139,7 +139,7 @@ export class TempoDatasource extends DataSourceWithBackend<TempoQuery, TempoJson
         if (!otelTraceData.batches) {
           subQueries.push(of({ error: { message: 'JSON is not valid OpenTelemetry format' }, data: [] }));
         } else {
-          subQueries.push(of(transformFromOTEL(otelTraceData.batches)));
+          subQueries.push(of(transformFromOTEL(otelTraceData.batches, this.nodeGraph?.enabled)));
         }
       } else {
         subQueries.push(of({ data: [], state: LoadingState.Done }));
@@ -158,7 +158,7 @@ export class TempoDatasource extends DataSourceWithBackend<TempoQuery, TempoJson
             if (response.error) {
               return response;
             }
-            return transformTrace(response);
+            return transformTrace(response, this.nodeGraph?.enabled);
           })
         )
       );
