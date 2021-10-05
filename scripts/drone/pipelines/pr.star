@@ -48,10 +48,6 @@ def pr_pipelines(edition):
     steps = [
         codespell_step(),
         shellcheck_step(),
-        lint_backend_step(edition=edition),
-        lint_frontend_step(),
-        test_backend_step(edition=edition),
-        test_frontend_step(),
         build_backend_step(edition=edition, ver_mode=ver_mode, variants=variants),
         build_binary_step(edition=edition, ver_mode=ver_mode,  variants=variants),
         build_frontend_step(edition=edition, ver_mode=ver_mode),
@@ -82,8 +78,6 @@ def pr_pipelines(edition):
         build_docs_website_step(),
         copy_packages_for_docker_step(),
         build_docker_images_step(edition=edition, ver_mode=ver_mode, archs=['amd64',]),
-        postgres_integration_tests_step(),
-        mysql_integration_tests_step(),
     ])
 
     if include_enterprise2:
