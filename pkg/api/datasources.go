@@ -385,7 +385,7 @@ func (hs *HTTPServer) CallDatasourceResource(c *models.ReqContext) {
 		return
 	}
 
-	dsInstanceSettings, err := adapters.ModelToInstanceSettings(ds, hs.decryptSecureJsonData())
+	dsInstanceSettings, err := adapters.ModelToInstanceSettings(ds, hs.decryptSecureJsonDataFn())
 	if err != nil {
 		c.JsonApiErr(500, "Unable to process datasource instance model", err)
 	}
@@ -449,7 +449,7 @@ func (hs *HTTPServer) CheckDatasourceHealth(c *models.ReqContext) response.Respo
 		return response.Error(500, "Unable to find datasource plugin", err)
 	}
 
-	dsInstanceSettings, err := adapters.ModelToInstanceSettings(ds, hs.decryptSecureJsonData())
+	dsInstanceSettings, err := adapters.ModelToInstanceSettings(ds, hs.decryptSecureJsonDataFn())
 	if err != nil {
 		return response.Error(500, "Unable to get datasource model", err)
 	}
@@ -488,7 +488,7 @@ func (hs *HTTPServer) CheckDatasourceHealth(c *models.ReqContext) response.Respo
 	return response.JSON(200, payload)
 }
 
-func (hs *HTTPServer) decryptSecureJsonData() func(map[string][]byte) map[string]string {
+func (hs *HTTPServer) decryptSecureJsonDataFn() func(map[string][]byte) map[string]string {
 	return func(m map[string][]byte) map[string]string {
 		decryptedJsonData, err := hs.SecretsService.DecryptJsonData(context.Background(), m)
 		if err != nil {
